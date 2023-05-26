@@ -172,7 +172,12 @@ const InfiniteScroll: ObjectDirective<
       await nextTick()
     } else {
       const { containerEl, cb, observer } = el[SCOPE]
-      if (containerEl.clientHeight && observer) {
+      if (observer) {
+        if (containerEl.clientHeight === 0) {
+          // Make sure to get the style changes caused by the parent element or its own display state switching
+          await nextTick()
+          if (containerEl.clientHeight === 0) return
+        }
         checkFull(el, cb)
       }
     }
