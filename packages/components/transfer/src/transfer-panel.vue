@@ -22,8 +22,6 @@
         :prefix-icon="Search"
         clearable
         :validate-event="false"
-        @mouseenter="inputHover = true"
-        @mouseleave="inputHover = false"
       />
       <el-checkbox-group
         v-show="!hasNoMatch && !isEmpty(data)"
@@ -31,16 +29,22 @@
         :validate-event="false"
         :class="[ns.is('filterable', filterable), ns.be('panel', 'list')]"
       >
-        <el-checkbox
-          v-for="item in filteredData"
-          :key="item[propsAlias.key]"
-          :class="ns.be('panel', 'item')"
-          :label="item[propsAlias.key]"
-          :disabled="item[propsAlias.disabled]"
-          :validate-event="false"
+        <div
+          v-if="isMounted"
+          v-infinite-scroll="load"
+          :infinite-scroll-immediate="false"
         >
-          <option-content :option="optionRender?.(item)" />
-        </el-checkbox>
+          <el-checkbox
+            v-for="item in filteredData.slice(0, count)"
+            :key="item[propsAlias.key]"
+            :class="ns.be('panel', 'item')"
+            :label="item[propsAlias.key]"
+            :disabled="item[propsAlias.disabled]"
+            :validate-event="false"
+          >
+            <option-content :option="optionRender?.(item)" />
+          </el-checkbox>
+        </div>
       </el-checkbox-group>
       <p v-show="hasNoMatch || isEmpty(data)" :class="ns.be('panel', 'empty')">
         {{ hasNoMatch ? t('el.transfer.noMatch') : t('el.transfer.noData') }}
@@ -53,12 +57,13 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive, toRefs, useSlots } from 'vue'
+import { computed, onMounted, reactive, ref, toRefs, useSlots } from 'vue'
 import { isEmpty } from '@element-plus/utils'
 import { useLocale, useNamespace } from '@element-plus/hooks'
 import { ElCheckbox, ElCheckboxGroup } from '@element-plus/components/checkbox'
 import { ElInput } from '@element-plus/components/input'
 import { Search } from '@element-plus/icons-vue'
+import InfiniteScroll from '@element-plus/components/infinite-scroll'
 import { transferPanelEmits, transferPanelProps } from './transfer-panel'
 import { useCheck, usePropsAlias } from './composables'
 
@@ -82,7 +87,6 @@ const panelState = reactive<TransferPanelState>({
   checked: [],
   allChecked: false,
   query: '',
-  inputHover: false,
   checkChangeByUser: true,
 })
 
@@ -101,7 +105,18 @@ const hasNoMatch = computed(
 
 const hasFooter = computed(() => !isEmpty(slots.default!()[0].children))
 
-const { checked, allChecked, query, inputHover } = toRefs(panelState)
+const { checked, allChecked, query } = toRefs(panelState)
+
+// graham
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
+const count = ref(50)
+const load = () => {
+  count.value += 50
+}
+const vInfiniteScroll = InfiniteScroll
 
 defineExpose({
   /** @description filter keyword */
